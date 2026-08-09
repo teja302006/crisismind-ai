@@ -7,7 +7,7 @@
     "dev:frontend": "vite",
     "dev:backend": "tsx watch api/server.ts",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "build:frontend": "vite build",
+    "build:frontend": "node ./node_modules/vite/bin/vite.js build",
     "build:backend": "tsc --project tsconfig.server.json",
     "build": "npm run build:frontend",
     "start": "tsx api/server.ts"
