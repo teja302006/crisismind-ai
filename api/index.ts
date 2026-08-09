@@ -245,5 +245,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   });
 });
 
-module.exports = app;
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = app;
+}
 export default app;
