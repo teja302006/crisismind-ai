@@ -1,8 +1,19 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { dbService } from './dbService';
 import { Incident, RiskZone, EmergencyResource } from '../types';
 
 const apiProvider = process.env.AI_PROVIDER || 'gemini';
 const apiKey = process.env.GEMINI_API_KEY || '';
+
+// Safely initialize Gemini
+let genAI: GoogleGenerativeAI | null = null;
+if (apiKey) {
+  try {
+    genAI = new GoogleGenerativeAI(apiKey);
+  } catch (err) {
+    console.error('Failed to initialize GoogleGenerativeAI client:', err);
+  }
+}
 
 export interface CopilotContext {
   activeZoneId?: string;
@@ -52,10 +63,8 @@ export const aiService = {
     };
 
     // If Gemini is available and configured, use it
-    if (apiProvider === 'gemini' && apiKey) {
+    if (apiProvider === 'gemini' && genAI && apiKey) {
       try {
-        const { GoogleGenerativeAI } = await import('@google/generative-ai');
-        const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
           model: 'gemini-1.5-flash',
           systemInstruction: `You are CrisisMind Copilot, an emergency intelligence decision-support assistant.

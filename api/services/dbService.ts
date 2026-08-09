@@ -1,24 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
-import crypto from 'crypto';
 import { Incident, IncidentReport, RiskZone, EmergencyResource, RiskAssessment, AiInteraction, RouteRequest, Notification } from '../types';
 
-// Read configuration from environment safely
+// Read configuration from environment
 const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
+const isSupabaseEnabled = supabaseUrl !== '' && supabaseAnonKey !== '';
 
-export let isSupabaseEnabled = false;
-export let supabase: any = null;
-
-try {
-  if (supabaseUrl && supabaseAnonKey && supabaseUrl !== 'undefined' && supabaseAnonKey !== 'undefined') {
-    supabase = createClient(supabaseUrl, supabaseAnonKey);
-    isSupabaseEnabled = true;
-  }
-} catch (err) {
-  console.error('Failed to initialize Supabase client:', err);
-  isSupabaseEnabled = false;
-  supabase = null;
-}
+export const supabase = isSupabaseEnabled ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 // =========================================================================
 // IN-MEMORY / LOCAL DATABASE (SEED DATA)
