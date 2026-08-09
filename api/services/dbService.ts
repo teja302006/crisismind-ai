@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
 import { Incident, IncidentReport, RiskZone, EmergencyResource, RiskAssessment, AiInteraction, RouteRequest, Notification } from '../types';
 
 // Read configuration from environment

@@ -11,18 +11,25 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Normalize Vercel serverless function paths
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.url.startsWith('/api/index.ts')) {
+    req.url = req.url.replace('/api/index.ts', '');
+  }
+  next();
+});
+
 // Global logger middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
   console.log(`[API] ${req.method} ${req.url}`);
   next();
 });
 
-// =========================================================================
-// API ENDPOINTS
-// =========================================================================
+// Create base sub-router to support dual prefix mounting
+const router = express.Router();
 
 // --- Incidents ---
-app.get('/api/incidents', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/incidents', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const incidents = await dbService.getIncidents();
     res.json(incidents);
@@ -31,7 +38,7 @@ app.get('/api/incidents', async (req: Request, res: Response, next: NextFunction
   }
 });
 
-app.get('/api/incidents/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/incidents/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const incident = await dbService.getIncidentById(req.params.id);
     if (!incident) {
@@ -44,7 +51,7 @@ app.get('/api/incidents/:id', async (req: Request, res: Response, next: NextFunc
   }
 });
 
-app.post('/api/incidents', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/incidents', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { type, location, latitude, longitude, severity, description, confidence } = req.body;
     if (!type || !location || !latitude || !longitude || !severity) {
@@ -59,7 +66,7 @@ app.post('/api/incidents', async (req: Request, res: Response, next: NextFunctio
 });
 
 // --- Reports (Citizen reporting with AI triage simulation) ---
-app.post('/api/reports', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/reports', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { type, location, latitude, longitude, severity, description, contactPreference } = req.body;
     
@@ -99,7 +106,7 @@ app.post('/api/reports', async (req: Request, res: Response, next: NextFunction)
 });
 
 // --- Risk Analysis ---
-app.get('/api/risk', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/risk', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { lat, lng } = req.query;
     const riskZones = await dbService.getRiskZones();
@@ -130,7 +137,7 @@ app.get('/api/risk', async (req: Request, res: Response, next: NextFunction) => 
 });
 
 // --- Emergency Resources ---
-app.get('/api/resources', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/resources', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const resources = await dbService.getEmergencyResources();
     res.json(resources);
@@ -140,7 +147,7 @@ app.get('/api/resources', async (req: Request, res: Response, next: NextFunction
 });
 
 // --- Safe Routes ---
-app.post('/api/routes', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/routes', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { startLat, startLng, endLat, endLng } = req.body;
     if (!startLat || !startLng || !endLat || !endLng) {
@@ -171,7 +178,7 @@ app.post('/api/routes', async (req: Request, res: Response, next: NextFunction) 
 });
 
 // --- CrisisMind Copilot (AI chat assistant) ---
-app.post('/api/copilot', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/copilot', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { query, context } = req.body;
     if (!query) {
@@ -187,7 +194,7 @@ app.post('/api/copilot', async (req: Request, res: Response, next: NextFunction)
 });
 
 // --- Analytics ---
-app.get('/api/analytics', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/analytics', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const days = parseInt(req.query.days as string || '7');
     const analytics = await dbService.getAnalytics(days);
@@ -198,7 +205,7 @@ app.get('/api/analytics', async (req: Request, res: Response, next: NextFunction
 });
 
 // --- Notifications ---
-app.get('/api/notifications', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/notifications', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const notifications = await dbService.getNotifications();
     res.json(notifications);
@@ -207,7 +214,7 @@ app.get('/api/notifications', async (req: Request, res: Response, next: NextFunc
   }
 });
 
-app.post('/api/notifications/read', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/notifications/read', async (req: Request, res: Response, next: NextFunction) => {
   try {
     await dbService.markNotificationsRead();
     res.json({ success: true });
@@ -215,6 +222,10 @@ app.post('/api/notifications/read', async (req: Request, res: Response, next: Ne
     next(err);
   }
 });
+
+// Mount the router on both /api (local dev proxy) and root / (Vercel serverless function root)
+app.use('/api', router);
+app.use('/', router);
 
 // =========================================================================
 // ERROR HANDLING MIDDLEWARE

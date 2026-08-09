@@ -122,7 +122,18 @@ export const apiService = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query, context }),
       });
-      if (!res.ok) throw new Error('Network error');
+      
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        return {
+          response: `### ⚠️ Copilot Server Error (${res.status})
+The emergency operations backend returned an error while processing the request:
+> **${errData?.error || 'Internal Error'}**: ${errData?.message || 'The server failed to evaluate the telemetry query.'}
+
+Please check the system configuration or verify Vercel environment variable settings.`,
+          provider: 'demo'
+        };
+      }
       return await res.json();
     } catch (err) {
       console.warn('API error querying copilot, generating offline response:', err);
